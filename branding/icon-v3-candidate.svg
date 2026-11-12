@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cyan Eclipse Darkseal icon — v3 candidate pending owner re-election">
+  <!-- V3 CANDIDATE 2026-11-12 — pending owner re-election; canonical branding/icon.svg remains elected v2 until re-election -->
+  <!-- Size cure: one-line wordmark set in a condensed face at 9.2 units, baseline 50.2; glyph and palette unchanged -->
+  <circle cx="32" cy="32" r="30" fill="#0d1b2a"/>
+  <circle cx="32" cy="32" r="29" fill="none" stroke="#0ff6f7" stroke-width="2"/>
+  <g transform="translate(0 -6.5)">
+    <circle cx="32" cy="27" r="13" fill="#080c14" stroke="#00d4ff" stroke-width="2"/>
+    <circle cx="36.5" cy="23.5" r="10.5" fill="#0d1b2a"/>
+    <path d="M14 42 h36" stroke="#a0aec0" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <path d="M18 38.5 l2.8 2.8 L26 36" stroke="#0ff6f7" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M29 38.5 l2.8 2.8 L37 36" stroke="#0ff6f7" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 38.5 l2.8 2.8 L48 36" stroke="#0ff6f7" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="32" y="50.2" text-anchor="middle" font-family="'Noto Sans Condensed','Arial Narrow','Liberation Sans Narrow',sans-serif" font-weight="700" font-size="9.2" letter-spacing="0" fill="#fefefe">DARKSEAL</text>
+</svg>
