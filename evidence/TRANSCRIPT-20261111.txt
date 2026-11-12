@@ -1,0 +1,7 @@
+DARKSEAL MCP SMOKE + SUITE TRANSCRIPT — 2026-11-11 (droplet, Shard E)
+
+SMOKE PASS: 6 tools · PRESELECTED-AND-CHARGED · PRESELECTED-NOT-CHARGED · notary rejected · below-standard UNVERIFIABLE · UPSELLSEAL-OBJECT separation · check · export · recompute reproduced · form-value refused
+
+Ran 42 tests in 0.044s
+
+OK
