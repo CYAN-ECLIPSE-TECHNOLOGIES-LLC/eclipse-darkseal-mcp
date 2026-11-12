@@ -2,6 +2,10 @@
 
 **Powered by Cyan Eclipse Technologies** — https://cetech.ai
 
+![Cyan Eclipse Darkseal icon](branding/icon.svg)
+
+*Icon: `branding/icon.svg` — owner-elected 2026-11-12 (class MARGINAL: legible at 48 px, marginal at 32 px).*
+
 Darkseal seals the state the flow started in — every pre-ticked
 add-on, pre-chosen plan, and continuity toggle, element by
 element — at the moment your agent entered it. If a charge

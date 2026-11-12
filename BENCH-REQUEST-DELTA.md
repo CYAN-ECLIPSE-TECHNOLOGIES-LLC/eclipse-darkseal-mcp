@@ -20,6 +20,10 @@ PROPRIETARY — CYAN ECLIPSE TECHNOLOGIES LLC · COMPANY INTELLECTUAL PROPERTY
 - **C8 (DRK-REQ-015):** the receipt journal verifies end-to-end with exactly one receipt per capture and per verdict; a tampered record and a truncated export (chain-head mismatch) are both detected; a tampered store fails closed at load.
 - **C9 (DRK-REQ-016, DRK-REQ-014, DRK-REQ-009):** no metering exists anywhere: across all event classes, zero charge events are created, and no price/amount/tier field exists in the state file or the tool schemas; the verdict grammar is identical on every call. The MCP tool inventory equals SPEC §4.1 exactly; `darkseal_check` reveals verdict class + charged element names only; the gate-banned label appears as a verdict, label, or output string on NO surface (suite scan + build-time repo grep, clean outside the test's own scan list).
 
+## Icon election note — 2026-11-12
+
+The product icon (`branding/icon.svg`, promoted from the v2 candidate) was **elected by the owner 2026-11-12** on the human-verified renders, class MARGINAL (48 px legible · 32 px marginal). The **formal Icongate check is still owed** when the Icongate tool lands — no gate verdict is claimed here.
+
 ## Fences the bench is asked to hold the build to
 
 Buyer-side capture only — no seller-side instrumentation claims, no merchant-facing surface, no notary shape; verdicts name pre-selection states and elements only, never the gate-banned label or any legal conclusion; no form-field value custody; no merchant-aggregate surface; FREE funnel — no metering, no price point. Claims stay **bench-pending** until Verity's verdict lands; builder tests are not evidence.
