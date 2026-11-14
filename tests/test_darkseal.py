@@ -129,6 +129,70 @@ class TestRecompute(Base):
         self.assertEqual(fresh["verdict"], "UNVERIFIABLE")
 
 
+class TestSealIntegrityRecompute(Base):
+    """P6 test shape / cure F-1 (VERDICT-DELTA-20261113, C6):
+    recompute verifies the capture's seal and derives the
+    capture standard before minting anything. A fabricated or
+    tampered capture mints NO verdict class — named refusal,
+    fail closed."""
+
+    def _fabricated(self):
+        return {
+            "capture_id": "drk-fabricated000000",
+            "flow_id": "flow-fabricated-001",
+            "flow_kind": "signup",
+            "elements": [captures.el("continuity switch",
+                                     "auto-renew", "on")],
+            "grammar_coverage": ["continuity switch"],
+            "covered_classes": ["continuity switch"],
+            "outside_coverage": [],
+            "surface_id": "surface-alpha",
+            "traversal_timestamp": "2026-11-11T12:00:00Z",
+            "grammar_version": logic.GRAMMAR_VERSION,
+            "capture_standard": "full",
+            "seal": "0" * 64,
+            "separation": None,
+            "verdict": None,
+            "charged_elements": [],
+            "grammar_basis": None,
+            "outcome_artifacts": [],
+            "receipt_ref": None,
+        }
+
+    def test_fabricated_capture_mints_no_verdict(self):
+        fresh = darkseal.recompute(
+            self._fabricated(), logic.GRAMMAR_VERSION,
+            [captures.artifact("auto-renew")])
+        self.assertIsNone(fresh["verdict"])
+        self.assertEqual(fresh["error"],
+                         "SEAL_VERIFICATION_FAILED")
+
+    def test_flipped_element_breaks_seal_refused(self):
+        cid, _ = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        export = self.store.export_captures(cid)
+        tampered = json.loads(json.dumps(export["capture"]))
+        for el in tampered["elements"]:
+            if el["identity"] == "auto-renew":
+                el["default_state"] = "off"
+        fresh = darkseal.recompute(
+            tampered, logic.GRAMMAR_VERSION,
+            [captures.artifact("auto-renew")])
+        self.assertIsNone(fresh["verdict"])
+        self.assertEqual(fresh["error"],
+                         "SEAL_VERIFICATION_FAILED")
+
+    def test_genuine_capture_still_recomputes(self):
+        cid, out = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        export = self.store.export_captures(cid)
+        fresh = darkseal.recompute(
+            export["capture"], export["grammar_version"],
+            [captures.artifact("auto-renew")])
+        self.assertEqual(fresh["verdict"],
+                         "PRESELECTED-AND-CHARGED")
+
+
 class TestCaptureHonesty(Base):
     """DRK-REQ-004 / DRK-REQ-011 / DK-B3: below-standard captures
     verdict UNVERIFIABLE in 100% of cases; out-of-grammar

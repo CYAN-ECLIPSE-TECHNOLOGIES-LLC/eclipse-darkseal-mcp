@@ -386,6 +386,46 @@ class Store:
                 "grammar_version": record["grammar_version"]}
 
 
+def _bundle_of(record: dict) -> dict:
+    """The sealed bundle fields of a capture record, exactly as
+    seal_defaults sealed them. The seal is the digest of this
+    bundle; capture_id is derived from the same digest."""
+    return {k: record.get(k) for k in
+            ("flow_id", "flow_kind", "elements",
+             "grammar_coverage", "surface_id",
+             "traversal_timestamp", "grammar_version",
+             "capture_standard")}
+
+
+def _seal_intact(record) -> bool:
+    """True only when the record's seal recomputes over its own
+    bundle fields and its capture_id is the one that seal
+    derives. Any post-seal edit — an element state, the asserted
+    standard, the coverage — breaks the seal."""
+    if not isinstance(record, dict):
+        return False
+    seal = record.get("seal")
+    if not isinstance(seal, str) or not seal:
+        return False
+    if record.get("capture_id") != "drk-" + seal[:16]:
+        return False
+    return hmac.compare_digest(
+        seal, logic.digest_obj(_bundle_of(record)))
+
+
+def _derived_standard(record: dict) -> str:
+    """The capture standard derived from the elements under the
+    grammar — the same test seal_defaults applies — never the
+    caller-asserted value."""
+    elements = record.get("elements")
+    covered, _, _ = logic.coverage_of(elements)
+    problems = [logic.element_problem(el) for el in covered]
+    if not isinstance(elements, list) or not covered or \
+            any(p is not None for p in problems):
+        return "below-standard"
+    return "full"
+
+
 def recompute(capture: dict, grammar_version: str,
               outcome_artifacts) -> dict:
     """Third-party recomputation (DRK-REQ-002(iii),
@@ -393,11 +433,36 @@ def recompute(capture: dict, grammar_version: str,
     published element grammar + the outcome artifacts. Reads no
     service state. A below-standard capture recomputes to
     UNVERIFIABLE; an UPSELLSEAL-OBJECT capture recomputes to the
-    separation marker, never a whole-flow verdict."""
+    separation marker, never a whole-flow verdict.
+
+    Seal-bound (cure F-1, VERDICT-DELTA-20261113): the capture's
+    seal is verified against its bundle fields and the capture
+    standard is derived from the elements before any verdict is
+    computed. A capture whose seal does not verify, or whose
+    asserted standard disagrees with the derived one, mints NO
+    verdict class — it is refused by name, fail closed."""
     cap = capture.get("capture", capture)
     if grammar_version not in logic.GRAMMARS:
         return {"verdict": "UNVERIFIABLE",
                 "reason": "unknown_grammar_version"}
+    if not _seal_intact(cap):
+        return {"verdict": None,
+                "error": "SEAL_VERIFICATION_FAILED",
+                "reason": "capture seal does not verify against "
+                          "its bundle fields; no verdict is "
+                          "mintable from unverified material",
+                "grammar_version": grammar_version}
+    if cap.get("grammar_version") != grammar_version:
+        return {"verdict": "UNVERIFIABLE",
+                "reason": "grammar_version_mismatch",
+                "grammar_version": grammar_version}
+    if _derived_standard(cap) != cap.get("capture_standard"):
+        return {"verdict": None,
+                "error": "SEAL_VERIFICATION_FAILED",
+                "reason": "asserted capture_standard disagrees "
+                          "with the standard derived from the "
+                          "sealed elements",
+                "grammar_version": grammar_version}
     if cap.get("capture_standard") != "full":
         return {"verdict": "UNVERIFIABLE",
                 "grammar_version": grammar_version}
