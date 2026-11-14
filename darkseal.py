@@ -97,6 +97,48 @@ class Store:
                 raise ValueError("receipt journal failed "
                                  "verification at load; store "
                                  "fails closed")
+            for cid, record in self.captures.items():
+                self._verify_record(cid, record)
+
+    def _verify_record(self, capture_id: str, record: dict):
+        """Load-time record verification (cure F-2,
+        VERDICT-DELTA-20261113): the journal alone verifying is
+        not enough — every capture record is re-verified against
+        its own seal and bound to the journal before the store
+        serves anything. Any mismatch raises; the store fails
+        closed and the tampered record is never served."""
+        if record.get("capture_id") != capture_id or \
+                not _seal_intact(record):
+            raise ValueError(
+                f"capture record {capture_id} failed seal "
+                "verification at load; store fails closed")
+        expect = logic.digest_obj(
+            {"capture_id": capture_id, "seal": record["seal"],
+             "capture_standard": record["capture_standard"],
+             "separation": record["separation"]})
+        entry = next((e for e in self.journal
+                      if e.get("record_hash") ==
+                      record.get("receipt_ref")), None)
+        if entry is None or \
+                entry.get("kind") != "default_state_capture" or \
+                entry.get("payload_digest") != expect:
+            raise ValueError(
+                f"capture record {capture_id} is not bound to "
+                "its capture receipt at load; store fails closed")
+        if record["capture_standard"] == "full" and \
+                record.get("verdict") is not None:
+            vdigest = logic.digest_obj(
+                {"capture_id": capture_id,
+                 "verdict": record["verdict"],
+                 "charged_elements": record["charged_elements"],
+                 "grammar_version": record["grammar_version"]})
+            if not any(e.get("kind") == "verdict" and
+                       e.get("payload_digest") == vdigest
+                       for e in self.journal):
+                raise ValueError(
+                    f"capture record {capture_id} carries a "
+                    "verdict no journal verdict receipt binds "
+                    "at load; store fails closed")
 
     # ---------------------------------------------------------- io
     def _save(self):

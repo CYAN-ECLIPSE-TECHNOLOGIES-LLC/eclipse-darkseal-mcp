@@ -431,6 +431,42 @@ class TestReceiptChain(Base):
         self.assertTrue(ok)
         self.assertNotEqual(head, export["chain_head"])
 
+    def test_store_fails_closed_on_tampered_verdict(self):
+        # P6 test shape / cure F-2 (VERDICT-DELTA-20261113, C8):
+        # a state-file edit flipping a minted verdict must be
+        # refused loudly at load, never served.
+        cid, _ = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["captures"][cid]["verdict"] = "NO-PRESELECTION"
+        data["captures"][cid]["charged_elements"] = []
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_store_fails_closed_on_tampered_element(self):
+        cid, _ = self.seal_and_diff(artifacts=[])
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        for el in data["captures"][cid]["elements"]:
+            if el["identity"] == "auto-renew":
+                el["default_state"] = "off"
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_genuine_store_reloads_and_serves(self):
+        cid, _ = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        reloaded = darkseal.Store(self.path, KEYS)
+        view = reloaded.check(cid)
+        self.assertEqual(view["verdict"],
+                         "PRESELECTED-AND-CHARGED")
+        self.assertEqual(view["charged_elements"], ["auto-renew"])
+
     def test_store_fails_closed_on_tampered_journal(self):
         self.seal()
         with open(self.path, encoding="utf-8") as fh:
