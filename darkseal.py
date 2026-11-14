@@ -106,7 +106,12 @@ class Store:
         not enough — every capture record is re-verified against
         its own seal and bound to the journal before the store
         serves anything. Any mismatch raises; the store fails
-        closed and the tampered record is never served."""
+        closed and the tampered record is never served.
+        Cure-of-cure (VERDICT-DELTA-DARKSEAL-CURE-20261113
+        F-1): the verdict-receipt binding applies to EVERY
+        non-null minted verdict at every capture_standard —
+        the earlier "full"-only guard left below-standard
+        verdicts bound to nothing."""
         if record.get("capture_id") != capture_id or \
                 not _seal_intact(record):
             raise ValueError(
@@ -125,8 +130,7 @@ class Store:
             raise ValueError(
                 f"capture record {capture_id} is not bound to "
                 "its capture receipt at load; store fails closed")
-        if record["capture_standard"] == "full" and \
-                record.get("verdict") is not None:
+        if record.get("verdict") is not None:
             vdigest = logic.digest_obj(
                 {"capture_id": capture_id,
                  "verdict": record["verdict"],
@@ -312,6 +316,19 @@ class Store:
              "separation": record["separation"]})
         record["receipt_ref"] = receipt["record_hash"]
         assert set(record.keys()) == set(CAPTURE_FIELDS)
+        if standard != "full":
+            # Mint-side half of the load-time verdict binding
+            # (cure-of-cure, VERDICT-DELTA-DARKSEAL-CURE-20261113
+            # F-1): the below-standard UNVERIFIABLE verdict is
+            # minted here, at seal, so its journal verdict
+            # receipt is appended here too — the binding
+            # _verify_record checks at load must exist to check.
+            self._append_receipt(
+                "verdict",
+                {"capture_id": capture_id,
+                 "verdict": record["verdict"],
+                 "charged_elements": record["charged_elements"],
+                 "grammar_version": record["grammar_version"]})
         self.captures[capture_id] = record
         self._save()
         return {"accepted": True, "capture_id": capture_id,

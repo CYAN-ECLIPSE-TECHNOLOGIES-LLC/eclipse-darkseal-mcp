@@ -446,6 +446,54 @@ class TestReceiptChain(Base):
         with self.assertRaises(ValueError):
             darkseal.Store(self.path, KEYS)
 
+    def _seal_below_standard(self):
+        # A malformed element state puts the capture below
+        # standard; its UNVERIFIABLE verdict is minted at seal.
+        out = self.seal(elements=[
+            captures.el("checkbox", "add-on", "maybe")])
+        self.assertEqual(out["verdict"], "UNVERIFIABLE")
+        return out["capture_id"]
+
+    def test_store_fails_closed_on_tampered_below_standard_verdict(self):
+        # Cure-of-cure (VERDICT-DELTA-DARKSEAL-CURE-20261113
+        # F-1): the load-time verdict binding covers EVERY
+        # capture_standard — a state-file edit flipping a
+        # below-standard record's minted UNVERIFIABLE verdict
+        # to PRESELECTED-AND-CHARGED must raise at load.
+        cid = self._seal_below_standard()
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["captures"][cid]["verdict"] = \
+            "PRESELECTED-AND-CHARGED"
+        data["captures"][cid]["charged_elements"] = \
+            ["newsletter-opt-in"]
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_store_fails_closed_on_tampered_below_standard_charged(self):
+        # Same binding, charged_elements leg alone.
+        cid = self._seal_below_standard()
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["captures"][cid]["charged_elements"] = \
+            ["newsletter-opt-in"]
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_below_standard_store_reloads_and_serves(self):
+        # The binding must not refuse the genuine article: an
+        # untouched below-standard store reloads and serves
+        # its original UNVERIFIABLE verdict.
+        cid = self._seal_below_standard()
+        reloaded = darkseal.Store(self.path, KEYS)
+        view = reloaded.check(cid)
+        self.assertEqual(view["verdict"], "UNVERIFIABLE")
+        self.assertEqual(view["charged_elements"], [])
+
     def test_store_fails_closed_on_tampered_element(self):
         cid, _ = self.seal_and_diff(artifacts=[])
         with open(self.path, encoding="utf-8") as fh:
