@@ -50,7 +50,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import logic  # noqa: E402
 
-TOOL_VERSION = "0.1.0"
+TOOL_VERSION = "0.1.1"
 SERVER_ID = "eclipse-darkseal"
 
 CLAIM = ("Darkseal seals the state the flow started in — every "

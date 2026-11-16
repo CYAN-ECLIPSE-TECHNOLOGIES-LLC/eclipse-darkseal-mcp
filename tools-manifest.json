@@ -1,1 +1,1 @@
-{"server":"eclipse-darkseal","tools":["darkseal_seal_defaults","darkseal_diff_outcome","darkseal_get_verdict","darkseal_check","darkseal_recompute","darkseal_export_captures"],"version":"0.1.0"}
+{"server":"eclipse-darkseal","tools":["darkseal_seal_defaults","darkseal_diff_outcome","darkseal_get_verdict","darkseal_check","darkseal_recompute","darkseal_export_captures"],"version":"0.1.1"}

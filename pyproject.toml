@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eclipse-darkseal"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cyan Eclipse Darkseal — default-state witness for agent-traversed flows: seals the flow's starting state element by element and diffs it against the charges and terms that resulted (MCP server)"
 readme = "README.md"
 requires-python = ">=3.10"
