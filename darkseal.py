@@ -99,6 +99,27 @@ class Store:
                                  "fails closed")
             for cid, record in self.captures.items():
                 self._verify_record(cid, record)
+            # Verdict-presence binding, aggregate leg (cure
+            # F-1, VERDICT-DELTA-DARKSEAL-CURE2-20261113): an
+            # unminted (verdict-null) record must present no
+            # verdict receipt, and every verdict receipt must
+            # belong to a record presenting its verdict. The
+            # journal holds exactly one verdict receipt per
+            # minted verdict and no other path appends one, so
+            # the counts must match — a verdict erased to null
+            # (even with its minted-state fields scrubbed)
+            # leaves an orphan receipt and fails closed here.
+            receipts = sum(1 for e in self.journal
+                           if e.get("kind") == "verdict")
+            minted = sum(1 for r in self.captures.values()
+                         if r.get("verdict") is not None)
+            if receipts != minted:
+                raise ValueError(
+                    "verdict presence is not bound at load: "
+                    f"journal holds {receipts} verdict "
+                    f"receipt(s) but the store presents "
+                    f"{minted} minted verdict(s); store "
+                    "fails closed")
 
     def _verify_record(self, capture_id: str, record: dict):
         """Load-time record verification (cure F-2,
@@ -111,7 +132,17 @@ class Store:
         F-1): the verdict-receipt binding applies to EVERY
         non-null minted verdict at every capture_standard —
         the earlier "full"-only guard left below-standard
-        verdicts bound to nothing."""
+        verdicts bound to nothing.
+        Cure F-1 (VERDICT-DELTA-DARKSEAL-CURE2-20261113):
+        verdict PRESENCE is bound as well as content. A
+        record whose class mints a verdict — every
+        below-standard record (minted at seal), and any
+        record carrying a minted grammar basis or charged
+        elements (minted at diff) — must present a non-null
+        verdict; erasing a minted verdict to null raises
+        here. The aggregate receipt/verdict count check in
+        __init__ is the second leg, for an erasure that also
+        scrubs the minted-state fields."""
         if record.get("capture_id") != capture_id or \
                 not _seal_intact(record):
             raise ValueError(
@@ -130,6 +161,24 @@ class Store:
             raise ValueError(
                 f"capture record {capture_id} is not bound to "
                 "its capture receipt at load; store fails closed")
+        if record.get("verdict") is None:
+            # Presence binding (cure F-1, CURE2 verdict): a
+            # null verdict is legitimate ONLY on an unminted
+            # full-standard record (incl. the DK-C10
+            # separation class, which mints no verdict).
+            # Every other class mints: below-standard at
+            # seal, full at diff — and a diff mint always
+            # sets grammar_basis (and charged_elements when
+            # charged). A null verdict on a minted record is
+            # an erasure and fails closed.
+            if record.get("capture_standard") != "full" or \
+                    record.get("grammar_basis") is not None or \
+                    record.get("charged_elements"):
+                raise ValueError(
+                    f"capture record {capture_id} carries a "
+                    "minted verdict basis but no verdict at "
+                    "load — a sealed verdict has been erased "
+                    "to null; store fails closed")
         if record.get("verdict") is not None:
             vdigest = logic.digest_obj(
                 {"capture_id": capture_id,

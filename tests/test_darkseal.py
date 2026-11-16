@@ -494,6 +494,80 @@ class TestReceiptChain(Base):
         self.assertEqual(view["verdict"], "UNVERIFIABLE")
         self.assertEqual(view["charged_elements"], [])
 
+    def test_store_fails_closed_on_erased_verdict_full(self):
+        # Cure F-1 (VERDICT-DELTA-DARKSEAL-CURE2-20261113,
+        # judge probes J-E2): verdict PRESENCE is bound, not
+        # only content — erasing a minted full-standard
+        # verdict to null in the state file must raise at
+        # load, never load and serve verdict None.
+        cid, _ = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["captures"][cid]["verdict"] = None
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_store_fails_closed_on_erased_verdict_below_standard(self):
+        # Same presence binding, below-standard class
+        # (judge probe J-E): the UNVERIFIABLE verdict minted
+        # at seal erased to null must raise at load.
+        cid = self._seal_below_standard()
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        data["captures"][cid]["verdict"] = None
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_store_fails_closed_on_scrubbed_erased_verdict(self):
+        # Aggregate leg of the presence binding: an erasure
+        # that also scrubs the minted-state fields
+        # (grammar_basis, charged_elements, outcome
+        # artifacts) still leaves an orphan verdict receipt
+        # in the journal — the receipt/verdict count must
+        # match at load, so this raises too.
+        cid, _ = self.seal_and_diff(
+            artifacts=[captures.artifact("auto-renew")])
+        with open(self.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        rec = data["captures"][cid]
+        rec["verdict"] = None
+        rec["grammar_basis"] = None
+        rec["charged_elements"] = []
+        rec["outcome_artifacts"] = []
+        with open(self.path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        with self.assertRaises(ValueError):
+            darkseal.Store(self.path, KEYS)
+
+    def test_unminted_full_store_reloads_with_null_verdict(self):
+        # Presence binding must not refuse the genuine
+        # unminted article: a full-standard record sealed
+        # but not yet diffed legitimately presents verdict
+        # None and no verdict receipt, and reloads.
+        out = self.seal()
+        reloaded = darkseal.Store(self.path, KEYS)
+        view = reloaded.get_verdict(out["capture_id"])
+        self.assertIsNone(view["verdict"])
+
+    def test_separation_store_reloads_with_null_verdict(self):
+        # DK-C10 separation class mints no verdict at all:
+        # its null verdict is legitimate and reloads even
+        # after a diff attempt (diff_separation receipt is
+        # not a verdict receipt).
+        out = self.store.seal_defaults(
+            captures.upsellseal_object_fixture())
+        self.store.diff_outcome(out["capture_id"], [])
+        reloaded = darkseal.Store(self.path, KEYS)
+        view = reloaded.get_verdict(out["capture_id"])
+        self.assertIsNone(view["verdict"])
+        self.assertEqual(view["separation"],
+                         "UPSELLSEAL-OBJECT")
+
     def test_store_fails_closed_on_tampered_element(self):
         cid, _ = self.seal_and_diff(artifacts=[])
         with open(self.path, encoding="utf-8") as fh:
